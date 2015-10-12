@@ -1,0 +1,58 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+#ENV['VAGRANT_DEFAULT_PROVIDER'] = 'virtualbox'
+
+Vagrant.require_version ">= 1.7.2"
+
+VAGRANTFILE_API_VERSION = "2"
+ENABLE_GUI = false
+
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+
+  #Add the vms to each others host file
+  config.hostmanager.enabled = true
+  #Add entry to local hosts file
+  config.hostmanager.manage_host = true
+
+  #Remove annoying error on ubuntu
+  #config.ssh.pty = true
+
+  #Get the application (vex) and place it in the bin directory
+  config.trigger.before :up, :option => "value" do
+    run 'bash -c "if [ ! -d bin ] ; then mkdir bin ; fi"'
+    run 'bash -c "if [ ! -f bin/vex ] ; then cd bin; curl -O https://raw.githubusercontent.com/jamiemoore/vex/master/vex ; fi"'
+    run 'bash -c "if [ -f bin/vex ] ; then chmod +x bin/vex ; fi"'
+  end
+
+  #The hostmanager plugin can't determine dhcp addresses under virtualbox
+  #https://github.com/smdahlen/vagrant-hostmanager/issues/86
+  config.vm.provider "virtualbox" do |vb, override|
+    override.hostmanager.ip_resolver = proc do |vm, resolving_vm|
+      if vm.id
+        `VBoxManage guestproperty get #{vm.id} "/VirtualBox/GuestInfo/Net/1/V4/IP"`.split()[1]
+      end
+    end
+  end
+
+  #Enable the GUI if required.
+  config.vm.provider "vmware_workstation" do |v|
+    v.gui = ENABLE_GUI 
+  end
+
+  config.vm.provider "virtualbox" do |v|
+    v.gui = ENABLE_GUI
+  end
+
+  #Define Virtual Machines
+  config.vm.define "trusty64" do |trusty64|
+    trusty64.vm.box = "ubuntu/precise64"
+    trusty64.vm.hostname = "trusty64.dev.jamie.so"
+    trusty64.hostmanager.aliases = %w( precise64 )
+    trusty64.vm.provision "shell", path: "scripts/precise64-setup.sh"
+    trusty64.vm.synced_folder "bin", "/opt/vex"
+    trusty64.vm.network "forwarded_port", guest: 80, host: 8880 
+    trusty64.vm.network "private_network", type: "dhcp"
+  end
+
+end

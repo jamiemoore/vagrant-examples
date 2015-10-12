@@ -1,0 +1,9 @@
+#!/usr/bin/env python
+
+import platform
+import socket
+
+print "Hostname is " + socket.getfqdn()
+print "Linux Distribution is " + platform.linux_distribution()[0]
+print "Linux Dist Release is " + platform.linux_distribution()[1]
+print "Python version is " + platform.python_version()

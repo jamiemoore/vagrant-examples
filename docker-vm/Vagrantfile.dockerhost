@@ -1,0 +1,13 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+VAGRANTFILE_API_VERSION = "2"
+
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|  
+  config.vm.box = "puppetlabs/centos-7.0-64-nocm"
+  config.vm.provision "docker"
+  config.vm.provision "shell", inline: "ps aux | grep 'sshd:'  | awk '{print $2}' | xargs kill"
+  
+  #Forward any ports required from docker to the localhost
+  config.vm.network :forwarded_port, guest: 80, host: 8008 
+end

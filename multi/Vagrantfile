@@ -1,0 +1,68 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+ 
+#ENV['VAGRANT_DEFAULT_PROVIDER'] = 'virtualbox'
+
+Vagrant.require_version ">= 1.7.2"
+
+VAGRANTFILE_API_VERSION = "2"
+ENABLE_GUI = false
+
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+
+  #Add the vms to each others host file
+  config.hostmanager.enabled = true
+  #Add entry to local hosts file
+  config.hostmanager.manage_host = true
+
+  #The hostmanager plugin can't determine dhcp addresses under virtualbox
+  #https://github.com/smdahlen/vagrant-hostmanager/issues/86
+  config.vm.provider "virtualbox" do |vb, override|
+    override.hostmanager.ip_resolver = proc do |vm, resolving_vm|
+      if vm.id
+        `VBoxManage guestproperty get #{vm.id} "/VirtualBox/GuestInfo/Net/1/V4/IP"`.split()[1]
+      end
+    end
+  end
+
+  #Enable the GUI if required.
+  config.vm.provider "vmware_workstation" do |v|
+    v.gui = ENABLE_GUI 
+  end
+
+  config.vm.provider "virtualbox" do |v|
+    v.gui = ENABLE_GUI
+  end
+
+  #Define Virtual Machines (The order machines are created may be important)
+  config.vm.define "web01" do |web01|
+    web01.vm.box = "puppetlabs/centos-7.0-64-nocm"
+    web01.vm.hostname = "web01.dev.bom.gov.au"
+    web01.hostmanager.aliases = %w( web01 )
+    web01.vm.provision "shell", path: "vagrant/web-setup.sh"
+    web01.vm.synced_folder "bin", "/opt/vex"
+    web01.vm.network "forwarded_port", guest: 80, host: 8001
+    web01.vm.network "private_network", type: "dhcp"
+  end
+
+  config.vm.define "web02" do |web02|
+    web02.vm.box = "puppetlabs/centos-7.0-64-nocm"
+    web02.vm.hostname = "web02.dev.bom.gov.au"
+    web02.hostmanager.aliases = %w( web02 )
+    web02.vm.provision "shell", path: "vagrant/web-setup.sh"
+    web02.vm.synced_folder "bin", "/opt/vex"
+    web02.vm.network "forwarded_port", guest: 80, host: 8002
+    web02.vm.network "private_network", type: "dhcp"
+  end
+
+  config.vm.define "proxy" do |proxy|
+    proxy.vm.box = "puppetlabs/centos-7.0-64-nocm"
+    proxy.vm.hostname = "proxy.dev.bom.gov.au"
+    proxy.hostmanager.aliases = %w( proxy )
+    proxy.vm.provision "shell", path: "vagrant/proxy-setup.sh"
+    proxy.vm.synced_folder "bin", "/opt/vex"
+    proxy.vm.network "forwarded_port", guest: 80, host: 8000
+    proxy.vm.network "private_network", type: "dhcp"
+  end
+
+end
