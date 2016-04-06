@@ -25,10 +25,10 @@ Docker example using a Ubuntu 14.04 docker host
     ```bash
     vagrant plugin install vagrant-hostmanager
     ```
-1. Install the vagrant trigger plugin
+1. Install the vagrant triggers plugin
 
     ```bash
-    vagrant plugin install vagrant-trigger
+    vagrant plugin install vagrant-triggers
     ```
 
 
